@@ -1,0 +1,20 @@
+cat > .gitignore << 'EOF'
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / Cocos / Godot
+node_modules/
+dist/
+build/
+library/
+temp/
+.cache/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+EOF

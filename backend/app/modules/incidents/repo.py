@@ -24,19 +24,29 @@
 #         ]
 
 
+from __future__ import annotations
+
+import asyncio
+from typing import List
+
+from app.shared.types import Incident
+
+
 class IncidentsRepo:
-    async def list_incidents(self):
-        return [
-            {
-                "incident_id": "test-1",
-                "lat": 31.2304,
-                "lng": 121.4737,
-                "title": "测试点位（上海）",
-            },
-            {
-                "incident_id": "test-2",
-                "lat": 39.9042,
-                "lng": 116.4074,
-                "title": "测试点位（北京）",
-            },
+    def __init__(self) -> None:
+        self._lock = asyncio.Lock()
+        # MVP：内存数据（后端重启会重置）
+        self._items: List[Incident] = [
+            Incident(incident_id="test-1", lat=31.2304, lng=121.4737, title="测试点位（上海）"),
+            Incident(incident_id="test-2", lat=39.9042, lng=116.4074, title="测试点位（北京）"),
         ]
+
+    async def list_incidents(self) -> List[Incident]:
+        async with self._lock:
+            # 返回副本，避免外部误改
+            return list(self._items)
+
+    async def create_incident(self, incident: Incident) -> Incident:
+        async with self._lock:
+            self._items.append(incident)
+            return incident

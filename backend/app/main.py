@@ -20,3 +20,29 @@ app.include_router(router)
 @app.get("/health")
 def health():
     return {"ok": True}
+
+from fastapi.routing import APIRoute
+
+@app.get("/__routes")
+def __routes():
+    return sorted(
+        [
+            f"{','.join(sorted(r.methods))} {r.path}"
+            for r in app.routes
+            if isinstance(r, APIRoute)
+        ]
+    )
+
+
+from app.shared.types import IncidentCreateIn, IncidentCreateOut, Incident
+from uuid import uuid4
+
+@app.post("/incidents", response_model=IncidentCreateOut)
+def __fallback_create_incident(body: IncidentCreateIn):
+    inc = Incident(
+        incident_id=f"fallback-{uuid4().hex[:8]}",
+        lng=body.lng,
+        lat=body.lat,
+        title=body.title,
+    )
+    return IncidentCreateOut(incident=inc)

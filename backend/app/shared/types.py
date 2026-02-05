@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Any, Optional, List
+from typing import Any, Optional
 
 
 class AuthCallbackIn(BaseModel):
@@ -17,6 +17,16 @@ class Incident(BaseModel):
     lng: float
     lat: float
     title: str
+
+
+class IncidentCreateIn(BaseModel):
+    lng: float
+    lat: float
+    title: str = Field(min_length=1, max_length=120)
+
+
+class IncidentCreateOut(BaseModel):
+    incident: Incident
 
 
 class CommentCreateIn(BaseModel):

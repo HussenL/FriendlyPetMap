@@ -5,7 +5,9 @@ export type Incident = {
   title: string;
 };
 
-export type AppAuthResponse = {
-  app_token: string;
-  profile?: Record<string, any>;
+export type Comment = {
+  comment_id: string;
+  incident_id: string;
+  content: string;
+  created_at: string;
 };

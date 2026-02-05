@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends
-from app.shared.security import get_current_user
-from app.shared.types import CommentCreateIn, CommentCreateOut
+from fastapi import APIRouter, Query
+
+from app.shared.types import CommentCreateIn, CommentCreateOut, CommentListOut
 from .repo import CommentsRepo
 from .service import CommentsService
 
@@ -10,11 +10,13 @@ _repo = CommentsRepo()
 _svc = CommentsService(_repo)
 
 
+@router.get("/comments", response_model=CommentListOut)
+async def list_comments(incident_id: str = Query(..., min_length=1)):
+    items = await _svc.list_comments(incident_id)
+    return CommentListOut(incident_id=incident_id, items=items)
+
+
 @router.post("/comments", response_model=CommentCreateOut)
-async def post_comment(inp: CommentCreateIn, user=Depends(get_current_user)):
-    comment_id = await _svc.create_comment(
-        incident_id=inp.incident_id,
-        content=inp.content,
-        user=user,
-    )
-    return CommentCreateOut(comment_id=comment_id)
+async def create_comment(body: CommentCreateIn):
+    c = await _svc.create_comment(body.incident_id, body.content)
+    return CommentCreateOut(comment=c)

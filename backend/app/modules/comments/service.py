@@ -1,25 +1,25 @@
+from __future__ import annotations
+
+from uuid import uuid4
 from datetime import datetime, timezone
-import uuid
+
+from app.shared.types import Comment
 from .repo import CommentsRepo
 
 
 class CommentsService:
-    def __init__(self, repo: CommentsRepo):
+    def __init__(self, repo: CommentsRepo) -> None:
         self.repo = repo
 
-    async def create_comment(self, *, incident_id: str, content: str, user: dict) -> str:
-        now = datetime.now(timezone.utc).isoformat()
-        comment_id = str(uuid.uuid4())
+    async def list_comments(self, incident_id: str):
+        return await self.repo.list_by_incident(incident_id)
 
-        item = {
-            "incident_id": incident_id,
-            "sort_key": f"{now}#{comment_id}",   # DDB：SK 推荐这样
-            "created_at": now,
-            "comment_id": comment_id,
-            "content": content,
-            "user_sub": user.get("sub"),
-            "nickname": user.get("nickname"),
-            "avatar": user.get("avatar"),
-        }
-        await self.repo.create_comment(item)
-        return comment_id
+    async def create_comment(self, incident_id: str, content: str) -> Comment:
+        now = datetime.now(timezone.utc).isoformat()
+        c = Comment(
+            comment_id=f"c-{uuid4().hex[:12]}",
+            incident_id=incident_id,
+            content=content,
+            created_at=now,
+        )
+        return await self.repo.add(c)

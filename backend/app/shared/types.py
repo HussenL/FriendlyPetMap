@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
-from typing import Any, Optional
+from typing import Any, Optional, List
+from datetime import datetime
 
 
 class AuthCallbackIn(BaseModel):
@@ -34,6 +35,18 @@ class CommentCreateIn(BaseModel):
     content: str = Field(min_length=1, max_length=2000)
 
 
+class Comment(BaseModel):
+    comment_id: str
+    incident_id: str
+    content: str
+    created_at: str  # ISO string
+
+
 class CommentCreateOut(BaseModel):
     ok: bool = True
-    comment_id: str
+    comment: Comment
+
+
+class CommentListOut(BaseModel):
+    incident_id: str
+    items: List[Comment]

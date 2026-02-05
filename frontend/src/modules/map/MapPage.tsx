@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { mapStyle } from "./mapStyle";
@@ -10,6 +10,7 @@ export function MapPage() {
 
   useEffect(() => {
     if (!ref.current) return;
+    console.log("map container size:", ref.current?.clientWidth, ref.current?.clientHeight); // 输出地图容器的尺寸，帮助调试地图加载问题
 
     const map = new maplibregl.Map({
       container: ref.current,
@@ -17,6 +18,10 @@ export function MapPage() {
       zoom: 11,
       style: mapStyle,
     });
+
+    map.on("error", (e) => console.error("maplibre error:", e?.error || e)); // 监听地图错误事件
+    map.on("load", () => console.log("map loaded ✅")); // 监听地图加载完成事件
+
 
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
@@ -46,5 +51,10 @@ export function MapPage() {
     return () => map.remove();
   }, []);
 
-  return <div ref={ref} style={{ height: "100vh" }} />;
+  return (
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <div ref={ref} style={{ width: "100%", height: "100%" }} />
+    </div>
+  );
+
 }

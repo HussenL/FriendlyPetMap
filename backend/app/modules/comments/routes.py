@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
+from app.shared.text_safety import validate_text
 from app.shared.types import CommentCreateIn, CommentCreateOut, CommentListOut
 from .repo import CommentsRepo
 from .service import CommentsService
@@ -18,5 +19,18 @@ async def list_comments(incident_id: str = Query(..., min_length=1)):
 
 @router.post("/comments", response_model=CommentCreateOut)
 async def create_comment(body: CommentCreateIn):
-    c = await _svc.create_comment(body.incident_id, body.content)
+    res = validate_text(
+        body.content,
+        min_len=1,
+        max_len=300,
+        check_contact=True,
+        check_threat=True,
+    )
+    if not res.ok:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": res.reason, "message": "留言不符合规范"},
+        )
+
+    c = await _svc.create_comment(body.incident_id, res.cleaned)
     return CommentCreateOut(comment=c)

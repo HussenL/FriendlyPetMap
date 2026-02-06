@@ -320,441 +320,380 @@
 
 ---
 
-# ✅ 项目文件结构与作用（详细版）
+# 项目文件结构与作用（更新版 · MVP 已闭环）
 
-> 约定：
->
-> - **后端主语言：Python（FastAPI）**
-> - **前端副语言：TypeScript（React/Vite）**
-> - 模块边界：**routes（HTTP） / service（业务） / repo（存储） / shared（通用）**
-
-------
-
-## 1) 仓库根目录（Repo Root）
-
-```
-FriendlyPetMap/
-├─ backend/
-└─ frontend/
-```
-
-### ✅ 作用
-
-- `backend/`：所有 Python API、鉴权与业务数据读写
-- `frontend/`：所有 Web UI、地图渲染、调用 API
+   > 本文档用于向 **AI / 新开发者 / 未来的你** 说明
+   >  当前版本 FriendlyPetMap 的 **真实结构、真实能力、真实边界**。
+   >
+   > 当前状态：
+   >  **地图 + 定位 + 点位创建 + 留言 + 附近列表 + 区域遮罩**
+   >  已构成完整 MVP 功能闭环。
 
 ------
 
-# 2) 后端（Python / FastAPI）
+   ## 0️⃣ 项目当前完成度说明（一句话）
 
-## 2.1 后端总览结构
-
-```
-backend/
-├─ app/
-│  ├─ main.py
-│  ├─ api/
-│  │  └─ router.py
-│  ├─ modules/
-│  │  ├─ auth/
-│  │  │  ├─ routes.py
-│  │  │  ├─ douyin_client.py
-│  │  │  └─ jwt_service.py
-│  │  ├─ incidents/
-│  │  │  ├─ routes.py
-│  │  │  ├─ service.py
-│  │  │  └─ repo.py
-│  │  └─ comments/
-│  │     ├─ routes.py
-│  │     ├─ service.py
-│  │     └─ repo.py
-│  └─ shared/
-│     ├─ config.py
-│     ├─ types.py
-│     ├─ http.py
-│     └─ security.py
-├─ requirements.txt
-└─ .env  (本地开发可选)
-```
+   > **这是一个已完成核心交互闭环的地图型 Web MVP**：
+   >  用户可定位 → 浏览地图 → 创建点位 → 留言 → 查看附近点位与留言。
 
 ------
 
-## 2.2 后端文件逐个说明（非常详细）
+   ## 1️⃣ 仓库根目录（Repo Root）
 
-### `backend/requirements.txt`
+   ```
+   FriendlyPetMap/
+   ├─ backend/
+   └─ frontend/
+   ```
 
-**作用：Python 依赖清单**
+   ### 作用说明
 
-- FastAPI、uvicorn、httpx、PyJWT、boto3 等
-- 让环境可复现（CI/CD 或 다른开发者）
-
-------
-
-### `backend/.env`（可选）
-
-**作用：本地环境变量**
-
-- `APP_JWT_SECRET`、抖音 key/secret、CORS、DDB 表名等
-- 注意：生产环境通常用云平台的环境变量/密钥系统，不直接提交 `.env`
-
-------
-
-## `backend/app/main.py`
-
-**作用：FastAPI 应用入口（拼装层）**
-
-- 创建 `FastAPI()` 实例
-- 配置 CORS
-- `include_router()` 注册所有模块 API
-- 提供 `/health` 健康检查
-
-> 规则：`main.py` **不写业务逻辑**，只“拼装”。
+   - `backend/`
+      FastAPI 后端：
+     - 提供地图点位（Incidents）
+     - 提供留言读写（Comments）
+     - 当前为 **MVP 内存 / mock 实现**
+   - `frontend/`
+      React + Vite 前端：
+     - 地图渲染（MapLibre）
+     - 用户定位
+     - 点位与留言交互
+     - 右侧栏附近点位列表
 
 ------
 
-## `backend/app/api/router.py`
+   ## 2️⃣ 后端（Python / FastAPI）
 
-**作用：后端路由汇总器（模块装配）**
+   ### 2.1 后端总体结构
 
-- 统一 `include_router(auth_router/incidents_router/comments_router)`
-- 保证所有模块路由入口集中管理
-
-> 规则：新增模块时，只需要改这里，不动 main.py。
-
-------
-
-# 2.3 shared（跨模块通用层）
-
-## `backend/app/shared/config.py`
-
-**作用：配置中心（从 env 读取）**
-
-- 把环境变量统一收口为 `settings`
-- 所有模块读取配置必须从这里拿，禁止各模块直接 `os.getenv` 分散读取
-
-> 好处：配置集中、方便测试、避免漏配。
-
-------
-
-## `backend/app/shared/types.py`
-
-**作用：Pydantic 模型（接口契约）**
-
-- 定义 API 输入/输出结构（例如：`AuthCallbackIn/Out`, `Incident`, `CommentCreateIn/Out`）
-- 强制数据校验（长度、类型、必填字段）
-
-> 好处：接口可读、错误更早暴露、也方便未来 OpenAPI 自动生成前端类型。
-
-------
-
-## `backend/app/shared/http.py`
-
-**作用：统一 HTTP 错误语义**
-
-- `bad_request()` / `unauthorized()` 等
-- 模块内部用统一方式抛错，不到处手写 `HTTPException`
-
-> 好处：错误语义统一，便于前端处理与日志追踪。
-
-------
-
-## `backend/app/shared/security.py`
-
-**作用：鉴权依赖（FastAPI Dependency）**
-
-- 从 Header 解析 `Authorization: Bearer <token>`
-- 调用 `jwt_service.verify_app_token()`
-- 返回 `user`（JWT payload）给路由使用
-
-> 规则：凡是需要登录的 API，都通过 `Depends(get_current_user)` 注入用户信息。
-
-------
-
-# 2.4 modules/auth（身份模块）
-
-## `backend/app/modules/auth/routes.py`
-
-**作用：Auth HTTP 路由层**
-
-- 暴露 `POST /auth/douyin/callback`
-- 接收 `code`
-- 调用 `douyin_client` 交换 token & 拉 profile
-- 调用 `jwt_service` 签发 `app_token`
-- 返回 `{app_token, profile}`
-
-> 规则：routes.py **只处理 HTTP**，不处理复杂业务与存储。
-
-------
-
-## `backend/app/modules/auth/douyin_client.py`
-
-**作用：抖音 OAuth 客户端**
-
-- `exchange_code(code)`：用 code 换 `access_token/open_id`
-- `get_userinfo(access_token, open_id)`：获取用户公开资料
-
-> 规则：所有和抖音 API 的交互都只能放这里。未来如果换成微信/Apple，只替换这个模块实现。
-
-------
-
-## `backend/app/modules/auth/jwt_service.py`
-
-**作用：App Token（JWT）服务**
-
-- `sign_app_token(payload)`：签发业务 JWT
-- `verify_app_token(token)`：校验 JWT，返回 payload（用户身份）
-
-> 规则：JWT 的 secret、过期时间等只从 `shared/config.py` 读取。
-
-------
-
-# 2.5 modules/incidents（点位模块）
-
-## `backend/app/modules/incidents/routes.py`
-
-**作用：Incidents HTTP 路由层**
-
-- 暴露 `GET /incidents`
-- 调用 `service.list_incidents()` 返回点位数组
-
-> MVP 可公开读；未来想改登录可见，只需要加 `Depends(get_current_user)`。
-
-------
-
-## `backend/app/modules/incidents/service.py`
-
-**作用：点位业务层**
-
-- 决定“点位数据怎么取”
-- 组合/过滤/排序/分页（以后扩展在这里做）
-
-------
-
-## `backend/app/modules/incidents/repo.py`
-
-**作用：点位存储层（Repo）**
-
-- MVP：返回 mock 数据
-- 接 DynamoDB 后：在这里实现 scan/query
-- 未来换 Aurora/ES：只换 repo，不动 service/routes
-
-> 这层是“存储可替换”的关键。
-
-------
-
-# 2.6 modules/comments（留言模块）
-
-## `backend/app/modules/comments/routes.py`
-
-**作用：Comments HTTP 路由层**
-
-- 暴露 `POST /comments`
-- 强制登录：`Depends(get_current_user)`
-- 解析 `incident_id/content`
-- 调用 service 创建留言
-
-------
-
-## `backend/app/modules/comments/service.py`
-
-**作用：留言业务层**
-
-- 生成 `comment_id`
-- 生成 `created_at`
-- 组装写入 item（含 user_sub/nickname/avatar）
-- 将写入动作委托给 repo
-
-> 这里是业务规则中心：比如以后做敏感词过滤、频率限制等都加在这里。
-
-------
-
-## `backend/app/modules/comments/repo.py`
-
-**作用：留言存储层（Repo）**
-
-- MVP：mock（不写入）
-- 接 DynamoDB 后：实现 `put_item` 写入
-
-> 设计建议：Comments 表使用 `PK=incident_id, SK=created_at#comment_id`，以便按事件分页拉取留言。
-
-------
-
-------
-
-# 3) 前端（React + Vite / TypeScript）
-
-## 3.1 前端总览结构
-
-```
-frontend/
-├─ index.html
-├─ package.json
-├─ vite.config.ts
-├─ .env.local
-└─ src/
-   ├─ main.tsx
+   ```
+   backend/
    ├─ app/
-   │  └─ routes.tsx
-   ├─ shared/
-   │  ├─ config.ts
-   │  └─ types.ts
-   └─ modules/
-      ├─ api/
-      │  └─ client.ts
-      ├─ auth/
-      │  ├─ index.ts
-      │  ├─ LoginButton.tsx
-      │  └─ CallbackPage.tsx
-      ├─ map/
-      │  ├─ mapStyle.ts
-      │  └─ MapPage.tsx
-      ├─ incidents/
-      │  └─ service.ts
-      └─ comments/
-         └─ service.ts
-```
+   │  ├─ main.py
+   │  ├─ api/
+   │  │  └─ router.py
+   │  ├─ modules/
+   │  │  ├─ auth/
+   │  │  │  ├─ routes.py
+   │  │  │  ├─ douyin_client.py
+   │  │  │  └─ jwt_service.py
+   │  │  ├─ incidents/
+   │  │  │  ├─ routes.py
+   │  │  │  ├─ service.py
+   │  │  │  └─ repo.py
+   │  │  └─ comments/
+   │  │     ├─ routes.py
+   │  │     ├─ service.py
+   │  │     └─ repo.py
+   │  └─ shared/
+   │     ├─ config.py
+   │     ├─ types.py
+   │     ├─ http.py
+   │     └─ security.py
+   ├─ requirements.txt
+   └─ .env
+   ```
 
 ------
 
-## 3.2 前端文件逐个说明
-
-### `frontend/.env.local`
-
-**作用：前端构建时环境变量**
-
-- `VITE_API_BASE`
-- `VITE_DOUYIN_CLIENT_KEY`
-- `VITE_DOUYIN_REDIRECT_URI`
-- `VITE_TILES_URL`
-
-> 注意：必须在项目根目录，不要放 src 下；必须以 `VITE_` 前缀才能被 Vite 注入。
+   ## 2.2 后端核心文件职责（逐个）
 
 ------
 
-## `frontend/src/main.tsx`
+   ### `backend/app/main.py`
 
-**作用：React 入口**
+   **FastAPI 应用入口（拼装层）**
 
-- 初始化 ReactDOM
-- 注入 RouterProvider
+   - 创建 `FastAPI()` 实例
+   - 配置 CORS
+   - `include_router(api.router)`
+   - 提供 `/health` 健康检查
 
-------
+   **设计原则**
 
-## `frontend/src/app/routes.tsx`
-
-**作用：前端路由定义**
-
-- `/`：地图主页面
-- `/auth/callback`：抖音回调页面（拿 code）
+   - ❌ 不写业务逻辑
+   - ✅ 只负责“装配系统”
 
 ------
 
-## `frontend/src/shared/config.ts`
+   ### `backend/app/api/router.py`
 
-**作用：统一读取 import.meta.env**
+   **后端路由汇总器**
 
-- 把 `VITE_*` 收口成 `config` 对象
-- 其他模块只引用 `config`，不直接散落 `import.meta.env`
+   - 统一挂载：
+     - `/auth/*`
+     - `/incidents`
+     - `/comments`
+   - 是所有业务模块的“入口总线”
 
-------
+   **当前已挂载能力**
 
-## `frontend/src/shared/types.ts`
-
-**作用：前端业务类型**
-
-- `Incident`、`AppAuthResponse` 等
-- 可与后端 Pydantic 模型保持一致（但不强耦合）
-
-------
-
-# 3.3 前端 modules（功能模块）
-
-## `frontend/src/modules/api/client.ts`
-
-**作用：统一 API Client**
-
-- 封装 fetch
-- 自动带上 `Authorization: Bearer <app_token>`
-- 统一错误处理（res.ok，否则抛 Error）
-
-> 规则：所有 API 调用必须从这里走，避免到处复制粘贴 fetch。
+   - `GET /incidents`
+   - `POST /incidents`
+   - `GET /comments`
+   - `POST /comments`
 
 ------
 
-## `frontend/src/modules/auth/index.ts`
+   ## 2.3 shared（跨模块通用层）
 
-**作用：登录态存储**
+   ### `shared/config.py`
 
-- `getAppToken/setAppToken/clearAppToken`
-- 当前用 localStorage；未来可换 cookie 或 storage，不影响其他模块
-
-------
-
-## `frontend/src/modules/auth/LoginButton.tsx`
-
-**作用：构造抖音 OAuth 跳转 URL**
-
-- 生成 state（放入 sessionStorage）
-- redirect 到 `open.douyin.com/.../oauth/connect`
+   - 统一从环境变量读取配置
+   - JWT secret / CORS / AWS 参数等集中管理
 
 ------
 
-## `frontend/src/modules/auth/CallbackPage.tsx`
+   ### `shared/types.py`
 
-**作用：OAuth 回调处理**
+   **系统数据契约中心（非常重要）**
 
-- 从 URL 拿 `code/state`
-- 校验 state 防 CSRF
-- 调用后端 `POST /auth/douyin/callback`
-- 保存 `app_token`
-- 跳回首页 `/`
+   定义了：
 
-------
+   - `Incident`
+   - `IncidentCreateIn / Out`
+   - `Comment`
+   - `CommentCreateIn / Out`
+   - `CommentListOut`
 
-## `frontend/src/modules/incidents/service.ts`
-
-**作用：点位 API 调用封装**
-
-- `listIncidents()` → `GET /incidents`
+   > 前后端通过这些模型 **在语义上保持一致**，但不强耦合。
 
 ------
 
-## `frontend/src/modules/comments/service.ts`
+   ### `shared/security.py`
 
-**作用：留言 API 调用封装**
-
-- `postComment()` → `POST /comments`
-- 依赖 api client 自动带 token
-
-------
-
-## `frontend/src/modules/map/mapStyle.ts`
-
-**作用：地图样式配置（MapLibre Style JSON）**
-
-- raster source 指向 `config.tilesUrl`
+   - FastAPI dependency
+   - 校验 App JWT
+   - 当前 MVP 中 **暂未启用到 comments/incidents**
 
 ------
 
-## `frontend/src/modules/map/MapPage.tsx`
+   ## 2.4 modules/incidents（地图点位模块）
 
-**作用：地图主页面**
+   ### `modules/incidents/routes.py`
 
-- 初始化 MapLibre
-- 加载 incidents
-- 渲染 marker
-- 点击 marker → prompt 输入留言 → 调用 `postComment`
+   **HTTP 路由层**
 
-> 规则：MapPage 不直接写 fetch；只调用 service。
+   - `GET /incidents`
+      → 返回全部点位
+   - `POST /incidents`
+      → 创建新点位（lng / lat / title）
 
 ------
 
-# 4) 给其他 AI 的开发约束（非常重要）
+   ### `modules/incidents/service.py`
 
-为了保证项目长期可维护，其他 AI/开发者必须遵守：
+   **业务层**
 
-1. **routes.py 不写存储细节**
-2. **repo.py 不写业务规则**
-3. **service.py 不直接处理 HTTP**
-4. **shared/config.py 是唯一配置入口**
-5. **前端所有 API 请求都从 modules/api/client.ts 走**
+   - 负责点位创建逻辑
+   - 未来可加入：
+     - 防刷
+     - 合并重复点
+     - 频率限制
+
+------
+
+   ### `modules/incidents/repo.py`
+
+   **数据访问层（Repo）**
+
+   - 当前：**内存 / mock 实现**
+   - 返回结构化点位数据
+   - 未来：
+     - 可直接替换为 DynamoDB / Postgres
+     - 不影响 routes / service
+
+------
+
+   ## 2.5 modules/comments（留言模块）
+
+   ### `modules/comments/routes.py`
+
+   **HTTP 路由层**
+
+   - `GET /comments?incident_id=...`
+      → 获取某点位的留言列表
+   - `POST /comments`
+      → 创建留言
+
+------
+
+   ### `modules/comments/service.py`
+
+   **留言业务逻辑**
+
+   - 生成 comment_id
+   - 生成 created_at
+   - 负责“留言属于哪个点位”
+
+------
+
+   ### `modules/comments/repo.py`
+
+   **留言存储层**
+
+   - 当前：内存字典
+   - 结构：`incident_id -> comments[]`
+   - 后端重启会清空（MVP 行为）
+
+------
+
+   ## 3️⃣ 前端（React + Vite / TypeScript）
+
+   ### 3.1 前端总体结构
+
+   ```
+   frontend/
+   ├─ index.html
+   ├─ package.json
+   ├─ vite.config.ts
+   ├─ .env.local
+   └─ src/
+      ├─ main.tsx
+      ├─ app/
+      │  └─ routes.tsx
+      ├─ shared/
+      │  ├─ config.ts
+      │  └─ types.ts
+      └─ modules/
+         ├─ api/
+         │  └─ client.ts
+         ├─ auth/
+         ├─ incidents/
+         │  └─ service.ts
+         ├─ comments/
+         │  └─ service.ts
+         └─ map/
+            ├─ mapStyle.ts
+            └─ MapPage.tsx
+   ```
+
+------
+
+   ## 3.2 前端关键文件说明
+
+------
+
+   ### `src/main.tsx`
+
+   - React 应用入口
+   - 注入 Router
+   - 不包含业务逻辑
+
+------
+
+   ### `src/app/routes.tsx`
+
+   - 定义前端路由
+     - `/` → 地图主页面
+     - `/auth/callback` → OAuth 回调（预留）
+
+------
+
+   ## 3.3 modules/map（地图核心模块）
+
+   ### `mapStyle.ts`
+
+   - MapLibre Style JSON
+   - Raster OSM tiles
+   - **台湾区域遮罩**
+     - 使用多边形
+     - 四角缺角
+     - 视觉遮挡 + 交互禁止
+
+------
+
+   ### `MapPage.tsx`（当前 MVP 核心）
+
+   **承担的职责**
+
+   - 初始化 MapLibre（仅一次）
+   - 获取浏览器定位并自动 flyTo
+   - 控制最小放点 zoom（防刷）
+   - 台湾区域：
+     - 视觉遮罩
+     - 禁止交互
+   - 地图点击创建点位
+   - 弹窗输入：标题 + 留言
+   - Marker 渲染与点击
+   - 右侧栏：
+     - 显示 10km 内点位
+     - 点击跳转并加载留言
+   - 留言列表展示 + 继续留言
+
+   > 这是当前 MVP 的**功能核心文件**。
+
+------
+
+   ## 3.4 modules/incidents（前端）
+
+   ### `incidents/service.ts`
+
+   - 封装：
+     - `GET /incidents`
+     - `POST /incidents`
+   - 所有点位请求统一从这里走
+
+------
+
+   ## 3.5 modules/comments（前端）
+
+   ### `comments/service.ts`
+
+   - 封装：
+     - `GET /comments`
+     - `POST /comments`
+   - 不直接写 fetch
+
+------
+
+   ## 3.6 modules/api
+
+   ### `api/client.ts`
+
+   **统一 API Client**
+
+   - 自动带 baseUrl
+   - 统一错误处理
+   - 未来登录后自动带 JWT
+
+------
+
+   ## 4️⃣ 当前 MVP 已实现能力总结
+
+   ✔ 地图加载与缩放
+    ✔ 用户定位并自动跳转
+    ✔ 台湾区域遮罩（精细化缺角）
+    ✔ 缩放限制防刷
+    ✔ 点击创建点位
+    ✔ 一次输入标题 + 留言
+    ✔ Marker 交互
+    ✔ 留言列表
+    ✔ 10km 附近点位列表
+    ✔ 架构可替换、可演进
+
+------
+
+   ## 5️⃣ 明确尚未进入 MVP 的内容
+
+   - 登录鉴权（接口已预留）
+   - 持久化数据库
+   - 内容审核 / 举报
+   - 搜索 / 聚合统计
+   - 管理后台
+
+   > 以上内容 **可在不推翻当前结构的前提下增加**。
+
+------
+
+   ## ✅ 结论（给未来的你 / AI）
+
+   > 当前 FriendlyPetMap
+   >  **不是 Demo，而是一个已闭环、可演示、可扩展的 MVP 架构**。
+   >
+   > 后续开发应继续遵守：
+   >
+   > - routes / service / repo 分层
+   > - shared 统一能力
+   > - 地图 ≠ 业务数据
+   > - 登录 ≠ OAuth 本身

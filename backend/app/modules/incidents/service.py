@@ -21,3 +21,4 @@ class IncidentsService:
             title=title,
         )
         return await self.repo.create_incident(incident)
+

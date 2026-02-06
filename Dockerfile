@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/python:3.11-slim
+FROM python:3.11-slim
 
 # 基础环境
 ENV PYTHONDONTWRITEBYTECODE=1 \

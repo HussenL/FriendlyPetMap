@@ -1,0 +1,27 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: ap-northeast-2
+    ECR_REPO_URI: 046801216991.dkr.ecr.ap-northeast-2.amazonaws.com/fpm/backend
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws --version
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 046801216991.dkr.ecr.ap-northeast-2.amazonaws.com
+      - IMAGE_TAG=$(date +%Y%m%d-%H%M)
+      - echo "IMAGE_TAG=$IMAGE_TAG"
+  build:
+    commands:
+      - echo "Build Docker image..."
+      - docker build -t fpm-backend:latest .
+      - docker tag fpm-backend:latest $ECR_REPO_URI:latest
+      - docker tag fpm-backend:latest $ECR_REPO_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo "Push Docker image..."
+      - docker push $ECR_REPO_URI:latest
+      - docker push $ECR_REPO_URI:$IMAGE_TAG
+      - echo "Pushed: $ECR_REPO_URI:latest and :$IMAGE_TAG"

@@ -22,20 +22,22 @@
 #             self._by_incident.setdefault(comment.incident_id, []).append(comment)
 #             return comment
 
-
 from __future__ import annotations
 
+import os
+import asyncio
 from decimal import Decimal
-from typing import Any
+from typing import Any, Optional
+
+import boto3
+from botocore.config import Config
+from boto3.dynamodb.conditions import Key
 
 from app.shared.types import Comment
 
 
 def _to_dynamodb(value: Any) -> Any:
-    """
-    Recursively convert float to Decimal for DynamoDB.
-    DynamoDB (boto3) does NOT accept Python float.
-    """
+    """Recursively convert Python floats to Decimal for DynamoDB."""
     if isinstance(value, float):
         return Decimal(str(value))
     if isinstance(value, dict):
@@ -45,41 +47,76 @@ def _to_dynamodb(value: Any) -> Any:
     return value
 
 
+def _from_dynamodb(value: Any) -> Any:
+    """Recursively convert DynamoDB Decimals back to Python float/int."""
+    if isinstance(value, Decimal):
+        if value % 1 == 0:
+            return int(value)
+        return float(value)
+    if isinstance(value, dict):
+        return {k: _from_dynamodb(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_from_dynamodb(v) for v in value]
+    return value
+
+
 class CommentsRepo:
+    """
+    Best-practice DynamoDB repo:
+    - PK: incident_id (String)
+    - SK: created_at (String, ISO8601, sortable)
+    This enables efficient Query by incident_id and time order.
+    """
+
     def __init__(self) -> None:
-        # TODO: 保留你原本的 DynamoDB 初始化方式（region/table name/credentials）
-        # 例如（示意）：
-        #   import os, boto3
-        #   region = os.getenv("AWS_REGION", "ap-northeast-2")
-        #   table_name = os.getenv("DDB_COMMENTS_TABLE", "FriendlyPetMapComments")
-        #   self._ddb = boto3.resource("dynamodb", region_name=region)
-        #   self._table = self._ddb.Table(table_name)
-        #
-        # 如果你当前 repo 还是内存 dict，就先别用这份；但你现在已经接 DDB 了，所以应该有 _table。
-        pass
+        region = os.getenv("AWS_REGION", "ap-northeast-2")
+        table_name = os.getenv("DDB_COMMENTS_TABLE", "FriendlyPetMapComments")
+
+        cfg = Config(
+            region_name=region,
+            retries={"max_attempts": 10, "mode": "standard"},
+        )
+        self._ddb = boto3.resource("dynamodb", config=cfg)
+        self._table = self._ddb.Table(table_name)
 
     async def add(self, comment: Comment) -> Comment:
         item = _to_dynamodb(comment.model_dump())
-        self._table.put_item(Item=item)
+
+        # Best practice: ensure SK exists (created_at) and PK exists (incident_id)
+        if not item.get("incident_id") or not item.get("created_at"):
+            raise ValueError("Comment must include incident_id and created_at for DynamoDB keys.")
+
+        def _put():
+            # prevent overwriting same (incident_id, created_at)
+            return self._table.put_item(
+                Item=item,
+                ConditionExpression="attribute_not_exists(incident_id) AND attribute_not_exists(created_at)",
+            )
+
+        await asyncio.to_thread(_put)
         return comment
 
-    async def list_by_incident(self, incident_id: str) -> list[Comment]:
+    async def list_by_incident(
+        self,
+        incident_id: str,
+        limit: int = 200,
+        start_key: Optional[dict[str, Any]] = None,
+        newest_first: bool = False,
+    ) -> list[Comment]:
         """
-        推荐：用 Query（需要你的 Comments 表有合适的 PK/SK 设计）。
-        如果你现在暂时用 Scan 也能跑，但成本高。
-        这里先按你现有 repo 实现来写：
-        - 如果你已有 Query 写法：保留你原来的那段即可
-        - 如果你没有：先用 Scan 兜底（MVP 可接受）
+        Efficient Query. For pagination, pass back `LastEvaluatedKey` (start_key).
+        If you don't need pagination yet, just call with incident_id only.
         """
-        # TODO: 如果你已经实现了 Query，请直接把你现有的 query 逻辑放回这里并 return items
+        def _query():
+            kwargs: dict[str, Any] = {
+                "KeyConditionExpression": Key("incident_id").eq(incident_id),
+                "Limit": limit,
+                "ScanIndexForward": not newest_first,  # True=oldest->newest
+            }
+            if start_key:
+                kwargs["ExclusiveStartKey"] = start_key
+            return self._table.query(**kwargs)
 
-        # ===== Scan 兜底（MVP）=====
-        from boto3.dynamodb.conditions import Attr
-
-        resp = self._table.scan(
-            FilterExpression=Attr("incident_id").eq(incident_id)
-        )
-        raw_items = resp.get("Items", [])
-
-        # DynamoDB 返回的数值会是 Decimal；你的模型字段如果是 float/int 会自动转换或你自行处理
-        return [Comment(**it) for it in raw_items]
+        resp = await asyncio.to_thread(_query)
+        raw = resp.get("Items", [])
+        return [Comment(**_from_dynamodb(it)) for it in raw]

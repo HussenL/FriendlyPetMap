@@ -1,4 +1,5 @@
 // frontend/src/shared/config.ts
+console.log("VITE_API_BASE =", import.meta.env.VITE_API_BASE);
 
 function normalizeUrl(v?: string, fallback = ""): string {
   if (!v) return fallback;

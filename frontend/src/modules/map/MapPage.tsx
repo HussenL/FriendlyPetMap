@@ -417,7 +417,7 @@ export function MapPage() {
                 </div>
 
                 <div style={{ fontSize: 12, color: "#666" }}>
-                  限制：{canPostHint}；台湾区域已完全遮盖并禁用。
+                  限制：中国台湾地区已完全遮盖并禁用。
                 </div>
               </div>
             </div>

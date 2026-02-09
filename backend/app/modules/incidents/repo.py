@@ -31,27 +31,33 @@
 from __future__ import annotations
 
 import os
-from typing import List
-
 import boto3
-
 from app.shared.types import Incident
 
 
+from decimal import Decimal
+from typing import Any, List
+
+
+def _to_dynamodb(value: Any) -> Any:
+    """
+    Recursively convert float to Decimal for DynamoDB.
+    """
+    if isinstance(value, float):
+        return Decimal(str(value))
+    if isinstance(value, dict):
+        return {k: _to_dynamodb(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_to_dynamodb(v) for v in value]
+    return value
+
+
 class IncidentsRepo:
-    def __init__(self) -> None:
-        self.region = os.getenv("AWS_REGION", "ap-northeast-2")
-        self.table_name = os.getenv("DDB_INCIDENTS_TABLE", "FriendlyPetMapIncidents")
-
-        self._ddb = boto3.resource("dynamodb", region_name=self.region)
-        self._table = self._ddb.Table(self.table_name)
-
-    async def list_incidents(self) -> List[Incident]:
-        # MVP：scan 全表（后续上地理索引再优化）
-        resp = self._table.scan()
-        items = resp.get("Items", [])
-        return [Incident(**it) for it in items]
+    def __init__(self):
+        self._table = ...  # 你原来的 table 初始化逻辑
 
     async def create_incident(self, incident: Incident) -> Incident:
-        self._table.put_item(Item=incident.model_dump())
+        item = _to_dynamodb(incident.model_dump())
+        self._table.put_item(Item=item)
         return incident
+

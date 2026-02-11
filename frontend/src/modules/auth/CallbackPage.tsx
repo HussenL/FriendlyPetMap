@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { config } from "../../shared/config";
 import { apiPost } from "../api/client";
 import { setAppToken } from "./index";
-import type { AppAuthResponse } from "../../shared/types";
+
+type AppAuthResponse = {
+  app_token: string;
+};
 
 export function CallbackPage() {
   const [msg, setMsg] = useState("登录处理中…");

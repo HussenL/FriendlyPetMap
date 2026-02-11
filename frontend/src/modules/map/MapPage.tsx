@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { Map as MLMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { mapStyle } from "./mapStyle";
 import { listIncidents, createIncident } from "../incidents/service";
 import { listComments, postComment } from "../comments/service";
 import type { Incident, Comment } from "../../shared/types";
@@ -222,12 +221,15 @@ export function MapPage() {
       (maplibregl as any).__pmtilesProtocol = protocol;
     }
 
+    const styleUrl = `${import.meta.env.BASE_URL}styles/style.json`; // "/fpm/" + "styles/style.json"
+
     const map = new maplibregl.Map({
       container: mapDivRef.current,
       center: [121.4737, 31.2304],
       zoom: 12,
-      // style: mapStyle as any,
-      style: "/styles/style.json",
+      // style: mapStyle as any, // 本地前端网络osm
+      // style: "/styles/style.json", // 本地前端aws osm
+      style: styleUrl, // 线上aws osm
     });
 
     // ✅ 明确开启交互（有些情况下会被禁掉）

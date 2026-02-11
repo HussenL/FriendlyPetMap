@@ -1,12 +1,12 @@
 {
   "version": 8,
   "name": "FPM OMT (PMTiles)",
-  "sprite": "/styles/sprite",
-  "glyphs": "https://d2p2zorx0aji3h.cloudfront.net/fonts/{fontstack}/{range}.pbf",
+  "sprite": "styles/sprite",
+  "glyphs": "https://metark.ai/tiles/fonts/{fontstack}/{range}.pbf",
   "sources": {
     "openmaptiles": {
       "type": "vector",
-      "url": "pmtiles://https://d2p2zorx0aji3h.cloudfront.net/tiles/pmtiles/china_z14.pmtiles"
+      "url": "pmtiles://https://metark.ai/tiles/pmtiles/china_z14.pmtiles"
     }
   },
   "layers": [

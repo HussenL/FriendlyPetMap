@@ -1,4 +1,3 @@
-import React from "react";
 import { config } from "../../shared/config";
 
 function genState() {

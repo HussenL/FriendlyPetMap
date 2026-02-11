@@ -1,0 +1,138 @@
+{
+  "version": 8,
+  "name": "FPM OMT (PMTiles)",
+  "sprite": "/styles/sprite",
+  "glyphs": "https://d2p2zorx0aji3h.cloudfront.net/fonts/{fontstack}/{range}.pbf",
+  "sources": {
+    "openmaptiles": {
+      "type": "vector",
+      "url": "pmtiles://https://d2p2zorx0aji3h.cloudfront.net/tiles/pmtiles/china_z14.pmtiles"
+    }
+  },
+  "layers": [
+    { "id": "background", "type": "background", "paint": { "background-color": "#f8f8f8" } },
+
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "paint": {
+        "fill-color": [
+          "match",
+          ["get", "class"],
+          "grass", "#d9f0d3",
+          "wood", "#cfe8c8",
+          "scrub", "#d7e6d2",
+          "glacier", "#ddefff",
+          "#e9f2e8"
+        ],
+        "fill-opacity": 0.9
+      }
+    },
+
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "water",
+      "paint": { "fill-color": "#a9d3ff" }
+    },
+
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "waterway",
+      "paint": { "line-color": "#7fb8ff", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 14, 2.0] }
+    },
+
+    {
+      "id": "roads",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "paint": {
+        "line-color": [
+          "match",
+          ["get", "class"],
+          "motorway", "#f5a3a3",
+          "trunk", "#f5b3a3",
+          "primary", "#f7c6a3",
+          "secondary", "#f7d3a3",
+          "tertiary", "#f7e1a3",
+          "#c9c9c9"
+        ],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.3, 10, 1.2, 14, 4.2],
+        "line-opacity": 0.95
+      }
+    },
+
+    {
+      "id": "buildings",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "building",
+      "paint": { "fill-color": "#e0e0e0", "fill-opacity": 0.75 }
+    },
+
+    {
+      "id": "road_labels",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "transportation_name",
+      "minzoom": 12,
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": ["coalesce", ["get", "name:zh"], ["get", "name"], ["get", "ref"]],
+        "text-font": ["Open Sans Regular", "Noto Sans CJK Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 12, 10, 16, 14]
+      },
+      "paint": {
+        "text-color": "#555",
+        "text-halo-color": "rgba(255,255,255,0.85)",
+        "text-halo-width": 1.2
+      }
+    },
+
+    {
+      "id": "place_labels",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "minzoom": 4,
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:zh"], ["get", "name"]],
+        "text-font": ["Open Sans Regular", "Noto Sans CJK Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 4, 10, 10, 14, 14, 18],
+        "text-anchor": "center",
+        "text-allow-overlap": false
+      },
+      "paint": {
+        "text-color": "#2b2b2b",
+        "text-halo-color": "rgba(255,255,255,0.9)",
+        "text-halo-width": 1.4
+      }
+    },
+
+    {
+      "id": "poi_labels",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "poi",
+      "minzoom": 14,
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:zh"], ["get", "name"]],
+        "text-font": ["Open Sans Regular", "Noto Sans CJK Regular"],
+        "text-size": 12,
+        "text-offset": [0, 0.6],
+        "text-anchor": "top"
+      },
+      "paint": {
+        "text-color": "#444",
+        "text-halo-color": "rgba(255,255,255,0.9)",
+        "text-halo-width": 1.2
+      }
+    }
+  ]
+}

@@ -23,4 +23,8 @@ export const config = {
   tilesUrl: normalizeUrl(
     import.meta.env.VITE_TILES_URL as string | undefined
   ),
+
+  // PMTiles URL
+  pmtilesUrl: import.meta.env.VITE_PMTILES_URL as string,
+
 };

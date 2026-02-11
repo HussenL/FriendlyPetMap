@@ -5,6 +5,8 @@ import { mapStyle } from "./mapStyle";
 import { listIncidents, createIncident } from "../incidents/service";
 import { listComments, postComment } from "../comments/service";
 import type { Incident, Comment } from "../../shared/types";
+import { Protocol } from "pmtiles";
+
 
 const MIN_ZOOM_TO_POST = 14;
 const NEARBY_KM = 10;
@@ -202,13 +204,30 @@ export function MapPage() {
   // 初始化地图
   useEffect(() => {
     if (!mapDivRef.current) return;
+    // ✅ 注册 pmtiles:// 协议（必须在 new map 之前）
+    const pmtilesProtocol = (globalThis as any).__pmtilesProtocol || new Protocol();
+    (globalThis as any).__pmtilesProtocol = pmtilesProtocol;
+
+    if (!(globalThis as any).__pmtilesRegistered) {
+      maplibregl.addProtocol("pmtiles", pmtilesProtocol.tile);
+      (globalThis as any).__pmtilesRegistered = true;
+    }
+
     if (mapRef.current) return; // ✅ 防止重复初始化
+
+    // Register pmtiles:// protocol (only once)
+    if (!(maplibregl as any).__pmtilesProtocol) {
+      const protocol = new Protocol();
+      maplibregl.addProtocol("pmtiles", protocol.tile);
+      (maplibregl as any).__pmtilesProtocol = protocol;
+    }
 
     const map = new maplibregl.Map({
       container: mapDivRef.current,
       center: [121.4737, 31.2304],
       zoom: 12,
-      style: mapStyle as any,
+      // style: mapStyle as any,
+      style: "/styles/style.json",
     });
 
     // ✅ 明确开启交互（有些情况下会被禁掉）
@@ -226,6 +245,28 @@ export function MapPage() {
     map.on("zoom", syncZoom);
 
     map.on("load", async () => {
+      console.log("STYLE", map.getStyle());
+      console.log("LAYERS", map.getStyle().layers?.map(l => ({ id: l.id, source: (l as any).source, "source-layer": (l as any)["source-layer"] })));
+      map.on("idle", () => {
+        try {
+          const feats =
+            map.queryRenderedFeatures({ layers: ["water", "landcover", "roads", "buildings"] }) || [];
+          console.log("rendered features count:", feats.length);
+        } catch (e) {
+          console.log("queryRenderedFeatures error", e);
+        }
+      });
+      (map as any).showTileBoundaries = false;
+      (map as any).showCollisionBoxes = false;
+      map.on("error", (e: any) => {
+        console.log("MAP_ERROR", e?.error, e);
+      });
+
+      
+
+
+
+
       // 台湾遮罩（强制置顶）
       upsertTaiwanMask(map);
 

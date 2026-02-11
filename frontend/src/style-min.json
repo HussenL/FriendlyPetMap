@@ -1,0 +1,45 @@
+{
+  "version": 8,
+  "name": "FPM Minimal",
+  "sources": {
+    "openmaptiles": {
+      "type": "vector",
+      "url": "pmtiles://PMTILES_URL"
+    }
+  },
+  "layers": [
+    { "id": "background", "type": "background", "paint": { "background-color": "#ffffff" } },
+
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "water",
+      "paint": { "fill-color": "#a6cbe3" }
+    },
+
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "paint": { "fill-color": "#e8f3e8" }
+    },
+
+    {
+      "id": "roads",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "paint": { "line-color": "#c0c0c0", "line-width": 1 }
+    },
+
+    {
+      "id": "buildings",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "building",
+      "paint": { "fill-color": "#d9d0c9", "fill-opacity": 0.8 }
+    }
+  ]
+}

@@ -246,7 +246,14 @@ export function MapPage() {
     syncZoom();
     map.on("zoom", syncZoom);
 
+    // 测试用：点击事件
+    map.on("click", (e) => {
+      console.log("[FPM] map click", e.lngLat, "zoom", map.getZoom());
+    });
+
     map.on("load", async () => {
+      (window as any).__fpmLoaded = true;
+      console.log("[FPM] map load fired");
       console.log("STYLE", map.getStyle());
       console.log("LAYERS", map.getStyle().layers?.map(l => ({ id: l.id, source: (l as any).source, "source-layer": (l as any)["source-layer"] })));
       map.on("idle", () => {
@@ -386,7 +393,7 @@ export function MapPage() {
   return (
     <div style={{ width: "100vw", height: "100vh", display: "flex" }}>
       {/* Map */}
-      <div style={{ flex: 1, position: "relative" }}>
+      <div style={{ flex: 1, position: "relative" }} onClick={() => console.log("[FPM] wrapper clicked")}>
         <div ref={mapDivRef} style={{ width: "100%", height: "100%" }} />
 
         {/* 创建点位弹窗 */}

@@ -1,7 +1,7 @@
 {
   "version": 8,
   "name": "FPM OMT (PMTiles)",
-  "sprite": "styles/sprite",
+  "sprite": "/fpm/styles/sprite",
   "glyphs": "https://metark.ai/tiles/fonts/{fontstack}/{range}.pbf",
   "sources": {
     "openmaptiles": {

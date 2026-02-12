@@ -14,7 +14,7 @@ from fastapi import APIRouter
 
 api_router = APIRouter(prefix="/fpm-api")
 
-# api_router.include_router(router)
+api_router.include_router(router)
 
 app.include_router(api_router)
 

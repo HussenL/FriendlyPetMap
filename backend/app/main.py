@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
+from fastapi import Request, Response
 
 from app.api.router import router
 from app.shared.config import settings
@@ -68,10 +69,11 @@ else:
 app.include_router(router)
 
 
-@app.get("/health", methods=["GET", "HEAD"])
-def health():
+@app.api_route("/health", methods=["GET", "HEAD"])
+def health(request: Request):
+    if request.method == "HEAD":
+        return Response(status_code=200)
     return {"ok": True}
-
 
 @app.get("/__routes")
 def __routes():

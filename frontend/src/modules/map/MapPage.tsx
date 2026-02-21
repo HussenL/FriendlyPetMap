@@ -6,7 +6,6 @@ import { listComments, postComment } from "../comments/service";
 import type { Incident, Comment } from "../../shared/types";
 import { Protocol } from "pmtiles";
 
-
 const MIN_ZOOM_TO_POST = 14;
 const NEARBY_KM = 10;
 
@@ -14,7 +13,12 @@ const NEARBY_KM = 10;
 const TAIWAN_BBOX = { minLng: 119.0, maxLng: 122.1, minLat: 21.8, maxLat: 25.4 };
 
 function isInTaiwanBBox(lng: number, lat: number) {
-  return lng >= TAIWAN_BBOX.minLng && lng <= TAIWAN_BBOX.maxLng && lat >= TAIWAN_BBOX.minLat && lat <= TAIWAN_BBOX.maxLat;
+  return (
+    lng >= TAIWAN_BBOX.minLng &&
+    lng <= TAIWAN_BBOX.maxLng &&
+    lat >= TAIWAN_BBOX.minLat &&
+    lat <= TAIWAN_BBOX.maxLat
+  );
 }
 
 function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
@@ -61,27 +65,28 @@ function upsertTaiwanMask(map: any) {
         properties: {},
         geometry: {
           type: "Polygon",
-          coordinates: [[
-            // 从左边下方开始，顺时针绕一圈（8个点 + 闭合）
-            [minLng, minLat + CUT_Y],           // 左边（避开左下角）
-            [minLng + CUT_X, minLat],           // 下边（避开左下角）
+          coordinates: [
+            [
+              // 从左边下方开始，顺时针绕一圈（8个点 + 闭合）
+              [minLng, minLat + CUT_Y], // 左边（避开左下角）
+              [minLng + CUT_X, minLat], // 下边（避开左下角）
 
-            [maxLng - CUT_X, minLat],           // 下边（避开右下角）
-            [maxLng, minLat + CUT_Y],           // 右边（避开右下角）
+              [maxLng - CUT_X, minLat], // 下边（避开右下角）
+              [maxLng, minLat + CUT_Y], // 右边（避开右下角）
 
-            [maxLng, maxLat - CUT_Y],           // 右边（避开右上角）
-            [maxLng - CUT_X, maxLat],           // 上边（避开右上角）
+              [maxLng, maxLat - CUT_Y], // 右边（避开右上角）
+              [maxLng - CUT_X, maxLat], // 上边（避开右上角）
 
-            [minLng + CUT_X, maxLat],           // 上边（避开左上角）
-            [minLng, maxLat - CUT_Y],           // 左边（避开左上角）
+              [minLng + CUT_X, maxLat], // 上边（避开左上角）
+              [minLng, maxLat - CUT_Y], // 左边（避开左上角）
 
-            [minLng, minLat + CUT_Y],           // 闭合
-          ]],
+              [minLng, minLat + CUT_Y], // 闭合
+            ],
+          ],
         },
       },
     ],
   } as const;
-
 
   const srcId = "taiwan-mask-src";
   const layerId = "taiwan-mask-fill";
@@ -89,7 +94,9 @@ function upsertTaiwanMask(map: any) {
   const src = map.getSource(srcId);
   if (!src) map.addSource(srcId, { type: "geojson", data });
   else {
-    try { src.setData(data); } catch {}
+    try {
+      src.setData(data);
+    } catch {}
   }
 
   if (!map.getLayer(layerId)) {
@@ -101,7 +108,9 @@ function upsertTaiwanMask(map: any) {
     });
   }
 
-  try { map.moveLayer(layerId); } catch {}
+  try {
+    map.moveLayer(layerId);
+  } catch {}
 }
 
 export function MapPage() {
@@ -126,10 +135,7 @@ export function MapPage() {
   const [pendingLngLat, setPendingLngLat] = useState<{ lng: number; lat: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const canPostHint = useMemo(
-    () => `请继续放大，再点击地图创建新点位`,
-    [zoom]
-  );
+  const canPostHint = useMemo(() => `请继续放大，再点击地图创建新点位`, [zoom]);
 
   // 计算 10km 内点位
   const nearby = useMemo(() => {
@@ -177,10 +183,7 @@ export function MapPage() {
         map.flyTo({ center: [it.lng, it.lat], zoom: Math.max(map.getZoom(), MIN_ZOOM_TO_POST) });
       };
 
-      const m = new maplibregl.Marker({ element: el })
-        .setLngLat([it.lng, it.lat])
-        .addTo(map);
-
+      const m = new maplibregl.Marker({ element: el }).setLngLat([it.lng, it.lat]).addTo(map);
       markersRef.current.push(m);
     }
   };
@@ -203,22 +206,14 @@ export function MapPage() {
   // 初始化地图
   useEffect(() => {
     if (!mapDivRef.current) return;
-    // ✅ 注册 pmtiles:// 协议（必须在 new map 之前）
+    if (mapRef.current) return; // ✅ 防止重复初始化
+
+    // ✅ 注册 pmtiles:// 协议（必须在 new map 之前；只注册一次）
     const pmtilesProtocol = (globalThis as any).__pmtilesProtocol || new Protocol();
     (globalThis as any).__pmtilesProtocol = pmtilesProtocol;
-
     if (!(globalThis as any).__pmtilesRegistered) {
       maplibregl.addProtocol("pmtiles", pmtilesProtocol.tile);
       (globalThis as any).__pmtilesRegistered = true;
-    }
-
-    if (mapRef.current) return; // ✅ 防止重复初始化
-
-    // Register pmtiles:// protocol (only once)
-    if (!(maplibregl as any).__pmtilesProtocol) {
-      const protocol = new Protocol();
-      maplibregl.addProtocol("pmtiles", protocol.tile);
-      (maplibregl as any).__pmtilesProtocol = protocol;
     }
 
     const styleUrl = `${import.meta.env.BASE_URL}styles/style.json`; // "/fpm/" + "styles/style.json"
@@ -227,8 +222,6 @@ export function MapPage() {
       container: mapDivRef.current,
       center: [121.4737, 31.2304],
       zoom: 12,
-      // style: mapStyle as any, // 本地前端网络osm
-      // style: "/styles/style.json", // 本地前端aws osm
       style: styleUrl, // 线上aws osm
     });
 
@@ -239,42 +232,19 @@ export function MapPage() {
     map.touchZoomRotate.enable();
 
     mapRef.current = map;
-
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
     const syncZoom = () => setZoom(Number(map.getZoom().toFixed(2)));
     syncZoom();
     map.on("zoom", syncZoom);
 
-    // 测试用：点击事件
-    map.on("click", (e) => {
-      console.log("[FPM] map click", e.lngLat, "zoom", map.getZoom());
-    });
-
     map.on("load", async () => {
       (window as any).__fpmLoaded = true;
       console.log("[FPM] map load fired");
-      console.log("STYLE", map.getStyle());
-      console.log("LAYERS", map.getStyle().layers?.map(l => ({ id: l.id, source: (l as any).source, "source-layer": (l as any)["source-layer"] })));
-      map.on("idle", () => {
-        try {
-          const feats =
-            map.queryRenderedFeatures({ layers: ["water", "landcover", "roads", "buildings"] }) || [];
-          console.log("rendered features count:", feats.length);
-        } catch (e) {
-          console.log("queryRenderedFeatures error", e);
-        }
-      });
-      (map as any).showTileBoundaries = false;
-      (map as any).showCollisionBoxes = false;
+
       map.on("error", (e: any) => {
         console.log("MAP_ERROR", e?.error, e);
       });
-
-      
-
-
-
 
       // 台湾遮罩（强制置顶）
       upsertTaiwanMask(map);
@@ -369,7 +339,10 @@ export function MapPage() {
       // 立刻打开留言列表
       await openComments(incident);
 
-      map.flyTo({ center: [incident.lng, incident.lat], zoom: Math.max(map.getZoom(), MIN_ZOOM_TO_POST) });
+      map.flyTo({
+        center: [incident.lng, incident.lat],
+        zoom: Math.max(map.getZoom(), MIN_ZOOM_TO_POST),
+      });
     } catch (e) {
       console.error(e);
       alert("创建失败（见控制台）");
@@ -391,10 +364,17 @@ export function MapPage() {
   };
 
   return (
-    <div style={{ width: "100vw", height: "100vh", display: "flex" }}>
+    <div
+      style={{
+        display: "flex",
+        width: "100vw",
+        height: "100vh",
+        overflow: "hidden",
+      }}
+    >
       {/* Map */}
-      <div style={{ flex: 1, position: "relative" }} onClick={() => console.log("[FPM] wrapper clicked")}>
-        <div ref={mapDivRef} style={{ width: "100%", height: "100%" }} />
+      <div style={{ flex: "1 1 auto", minWidth: 0, position: "relative" }} onClick={() => console.log("[FPM] wrapper clicked")}>
+        <div ref={mapDivRef} style={{ position: "absolute", inset: 0 }} />
 
         {/* 创建点位弹窗 */}
         {modalOpen && (
@@ -421,9 +401,7 @@ export function MapPage() {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>
-                新建点位并留言
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>新建点位并留言</div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <input
@@ -466,28 +444,25 @@ export function MapPage() {
                   </button>
                 </div>
 
-                <div style={{ fontSize: 12, color: "#666" }}>
-                  限制：中国台湾地区已完全遮盖并禁用。
-                </div>
+                <div style={{ fontSize: 12, color: "#666" }}>限制：中国台湾地区已完全遮盖并禁用。</div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Right sidebar */}
-      <div
+      {/* Right sidebar (responsive) */}
+      <aside
         style={{
-          width: 360,
+          flex: "0 0 clamp(280px, 28vw, 420px)",
           borderLeft: "1px solid #e5e5e5",
           padding: 12,
           overflow: "auto",
           fontSize: 14,
+          background: "#fff",
         }}
       >
-        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>
-          附近 {NEARBY_KM}km 内点位
-        </div>
+        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>附近 {NEARBY_KM}km 内点位</div>
 
         <div style={{ color: "#666", fontSize: 12, marginBottom: 10 }}>
           {userPos
@@ -537,9 +512,7 @@ export function MapPage() {
 
         {/* Comments panel */}
         <div style={{ marginTop: 14, borderTop: "1px solid #eee", paddingTop: 12 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>
-            留言
-          </div>
+          <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>留言</div>
 
           {!selected && <div style={{ color: "#666" }}>请选择一个点位查看留言。</div>}
 
@@ -551,9 +524,7 @@ export function MapPage() {
                 <div style={{ color: "#666" }}>加载中...</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
-                  {comments.length === 0 && (
-                    <div style={{ color: "#666" }}>暂无留言。</div>
-                  )}
+                  {comments.length === 0 && <div style={{ color: "#666" }}>暂无留言。</div>}
                   {comments.map((c) => (
                     <div
                       key={c.comment_id}
@@ -605,7 +576,26 @@ export function MapPage() {
             </>
           )}
         </div>
-      </div>
+      </aside>
+
+      {/* ✅ 小屏：侧栏变底部面板 */}
+      <style>{`
+        @media (max-width: 900px) {
+          aside {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: auto;
+            height: 42vh;
+            width: 100% !important;
+            border-left: none !important;
+            border-top: 1px solid #e5e5e5;
+            box-shadow: 0 -8px 24px rgba(0,0,0,0.08);
+            z-index: 5000;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -18,12 +18,30 @@ class Incident(BaseModel):
     lng: float
     lat: float
     title: str
+    created_at: str | None = None  # ISO string (UTC). Old records may be None.
 
 
 class IncidentCreateIn(BaseModel):
     lng: float
     lat: float
     title: str = Field(min_length=1, max_length=120)
+
+
+class IncidentUpdateIn(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+
+
+class ConsolePaged(BaseModel):
+    page: int
+    page_size: int
+    total: int
+    items: list[Any]
+
+
+class CommentUpdateIn(BaseModel):
+    incident_id: str
+    created_at: str
+    content: str = Field(min_length=1, max_length=2000)
 
 
 class IncidentCreateOut(BaseModel):
@@ -40,6 +58,12 @@ class Comment(BaseModel):
     incident_id: str
     content: str
     created_at: str  # ISO string
+
+
+class ConsoleCommentRow(Comment):
+    incident_lng: float
+    incident_lat: float
+    incident_title: str
 
 
 class CommentCreateOut(BaseModel):

@@ -109,3 +109,25 @@ class IncidentsRepo:
 
         await asyncio.to_thread(_put)
         return incident
+
+    async def update_title(self, incident_id: str, title: str) -> Incident:
+        def _update():
+            return self._table.update_item(
+                Key={"incident_id": incident_id},
+                UpdateExpression="SET #t = :t",
+                ExpressionAttributeNames={"#t": "title"},
+                ExpressionAttributeValues={":t": _to_dynamodb(title)},
+                ReturnValues="ALL_NEW",
+            )
+
+        resp = await asyncio.to_thread(_update)
+        item = resp.get("Attributes")
+        if not item:
+            raise KeyError("incident not found")
+        return Incident(**_from_dynamodb(item))
+
+    async def delete(self, incident_id: str) -> None:
+        def _del():
+            return self._table.delete_item(Key={"incident_id": incident_id})
+
+        await asyncio.to_thread(_del)

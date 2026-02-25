@@ -3,6 +3,7 @@ export type Incident = {
   lng: number;
   lat: number;
   title: string;
+  created_at?: string;
 };
 
 export type Comment = {

@@ -120,3 +120,38 @@ class CommentsRepo:
         resp = await asyncio.to_thread(_query)
         raw = resp.get("Items", [])
         return [Comment(**_from_dynamodb(it)) for it in raw]
+
+    async def scan_comments(
+        self,
+        limit: int = 500,
+        start_key: Optional[dict[str, Any]] = None,
+    ) -> tuple[list[Comment], Optional[dict[str, Any]]]:
+        """Full table scan for admin console. Returns (items, last_evaluated_key)."""
+
+        def _scan():
+            kwargs: dict[str, Any] = {"Limit": limit}
+            if start_key:
+                kwargs["ExclusiveStartKey"] = start_key
+            return self._table.scan(**kwargs)
+
+        resp = await asyncio.to_thread(_scan)
+        raw = resp.get("Items", [])
+        items = [Comment(**_from_dynamodb(it)) for it in raw]
+        return items, resp.get("LastEvaluatedKey")
+
+    async def update_content(self, incident_id: str, created_at: str, content: str) -> None:
+        def _update():
+            return self._table.update_item(
+                Key={"incident_id": incident_id, "created_at": created_at},
+                UpdateExpression="SET #c = :c",
+                ExpressionAttributeNames={"#c": "content"},
+                ExpressionAttributeValues={":c": content},
+            )
+
+        await asyncio.to_thread(_update)
+
+    async def delete(self, incident_id: str, created_at: str) -> None:
+        def _del():
+            return self._table.delete_item(Key={"incident_id": incident_id, "created_at": created_at})
+
+        await asyncio.to_thread(_del)

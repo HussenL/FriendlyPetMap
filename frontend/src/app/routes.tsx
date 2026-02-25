@@ -10,7 +10,7 @@
 
 import { createBrowserRouter } from "react-router-dom";
 import { MapPage } from "../modules/map/MapPage";
-import { CallbackPage } from "../modules/auth/CallbackPage";
+import { ConsolePage } from "../modules/console/ConsolePage";
 import { AppShell } from "./AppShell";
 
 export const router = createBrowserRouter(
@@ -23,14 +23,7 @@ export const router = createBrowserRouter(
         </AppShell>
       ),
     },
-    {
-      path: "/auth/callback",
-      element: (
-        <AppShell>
-          <CallbackPage />
-        </AppShell>
-      ),
-    },
+    { path: "/console", element: <ConsolePage /> },
   ],
   { basename: "/fpm" }
 );

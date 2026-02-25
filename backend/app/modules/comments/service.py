@@ -24,3 +24,11 @@ class CommentsService:
         )
         return await self.repo.add(c)
 
+    async def update_comment(self, incident_id: str, created_at: str, content: str) -> None:
+        await self.repo.update_content(incident_id, created_at, content)
+
+    async def delete_comment(self, incident_id: str, created_at: str) -> None:
+        await self.repo.delete(incident_id, created_at)
+
+    async def scan_comments(self, limit: int = 500, start_key=None):
+        return await self.repo.scan_comments(limit=limit, start_key=start_key)
